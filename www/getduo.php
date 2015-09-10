@@ -84,6 +84,11 @@ if($bypassDuo == True) {
 }
 */
 
+// Bypass Duo if already authenticated by the idP
+if ($state['AuthnInstant']) {
+    SimpleSAML_Auth_ProcessingChain::resumeProcessing($state);
+}
+
 // Prepare attributes for presentation
 $attributes = $state['Attributes'];
 $para = array(
