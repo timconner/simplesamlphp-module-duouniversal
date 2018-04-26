@@ -65,7 +65,7 @@ if(isset($_POST['sig_response'])){
         $session = SimpleSAML_Session::getSessionFromRequest();
 
         // Set session variable that DUO authorization has passed
-        $session->setData('duosecurity:request', 'is_authorized', true);
+        $session->setData('duosecurity:request', 'is_authorized', true, SimpleSAML_Session::DATA_TIMEOUT_SESSION_END);
 
         SimpleSAML_Auth_ProcessingChain::resumeProcessing($state);
     }
