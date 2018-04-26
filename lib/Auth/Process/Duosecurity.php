@@ -108,9 +108,18 @@ class sspmod_duosecurity_Auth_Process_Duosecurity extends SimpleSAML_Auth_Proces
             $state['Source'] = $idpmeta;
         }
 
-        if (isset($state['duo_complete'])) {
+        // Get idP session from auth request
+        $session = SimpleSAML_Session::getSessionFromRequest();
+
+        // Has user already passed DUO authorization in this idP session instance?
+        $isAuthorized = $session->getData('duosecurity:request', 'is_authorized');
+
+        // Bypass DUO if already authenticated with the idP and DUO
+        if (isset($state['AuthnInstant']) && $isAuthorized) {
             return;
         }
+
+        $session->setData('duosecurity:request', 'is_authorized', false);
 
         // Set Keys for Duo SDK
         $state['duosecurity:akey'] = $this->_akey;
