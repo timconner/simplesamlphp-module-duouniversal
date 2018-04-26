@@ -61,7 +61,12 @@ if(isset($_POST['sig_response'])){
     }
 
     if ($resp != NULL and $resp === $username) {
-        $state['duo_complete'] = True;
+        // Get idP session from auth request
+        $session = SimpleSAML_Session::getSessionFromRequest();
+
+        // Set session variable that DUO authorization has passed
+        $session->setData('duosecurity:request', 'is_authorized', true, SimpleSAML_Session::DATA_TIMEOUT_SESSION_END);
+
         SimpleSAML_Auth_ProcessingChain::resumeProcessing($state);
     }
     else {
@@ -83,11 +88,6 @@ if($bypassDuo == True) {
 	SimpleSAML_Auth_ProcessingChain::resumeProcessing($state);
 }
 */
-
-// Bypass Duo if already authenticated by the idP
-if ($state['AuthnInstant']) {
-    SimpleSAML_Auth_ProcessingChain::resumeProcessing($state);
-}
 
 // Prepare attributes for presentation
 $attributes = $state['Attributes'];
