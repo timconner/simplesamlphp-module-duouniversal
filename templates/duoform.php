@@ -23,7 +23,7 @@ $username_attribute = $this->data['usernameAttribute'];
 define('AKEY', $this->data['akey']);
 
 /*
- * IKEY, SKEY, and HOST should come from the Duo Security admin dashboard on
+ * IKEY, SKEY, and HOST should come from the Duo admin dashboard on
  * the integrations page.
  */
 define('IKEY', $this->data['ikey']);

@@ -1,12 +1,12 @@
 <?php
 /**
- * Duo Security Authentication Processing filter
+ * Duo Universal Authentication Processing filter
  *
  * Filter to present Duo two factor authentication form
  *
  * @package simpleSAMLphp
  */
-class sspmod_duosecurity_Auth_Process_Duosecurity extends SimpleSAML_Auth_ProcessingFilter
+class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML_Auth_ProcessingFilter
 {
 
     /**
@@ -31,7 +31,7 @@ class sspmod_duosecurity_Auth_Process_Duosecurity extends SimpleSAML_Auth_Proces
     private $_usernameAttribute = "username";
 
     /**
-     * Initialize Duo Security 
+     * Initialize Duo Universal
      *
      * Validates and parses the configuration
      *
@@ -72,7 +72,7 @@ class sspmod_duosecurity_Auth_Process_Duosecurity extends SimpleSAML_Auth_Proces
     }
 
     /**
-     * Process a authentication response
+     * Process an authentication response
      *
      * This function saves the state, and redirects the user to the page where
      * the user can log in with their second factor.
@@ -97,7 +97,7 @@ class sspmod_duosecurity_Auth_Process_Duosecurity extends SimpleSAML_Auth_Proces
         $metadata = SimpleSAML_Metadata_MetaDataStorageHandler::getMetadataHandler();
 
         /**
-         * If the Duo Security module is active on a bridge $state['saml:sp:IdP']
+         * If the Duo Universal module is active on a bridge $state['saml:sp:IdP']
          * will contain an entry id for the remote IdP. If not, then
          * it is active on a local IdP and nothing needs to be
          * done.
@@ -112,22 +112,22 @@ class sspmod_duosecurity_Auth_Process_Duosecurity extends SimpleSAML_Auth_Proces
         $session = SimpleSAML_Session::getSessionFromRequest();
 
         // Has user already passed DUO authorization in this idP session instance?
-        $isAuthorized = $session->getData('duosecurity:request', 'is_authorized');
+        $isAuthorized = $session->getData('duouniversal:request', 'is_authorized');
 
         // Bypass DUO if already authenticated with the idP and DUO
         if (isset($state['AuthnInstant']) && $isAuthorized) {
             return;
         }
 
-        $session->setData('duosecurity:request', 'is_authorized', false);
+        $session->setData('duouniversal:request', 'is_authorized', false);
 
         // Set Keys for Duo SDK
-        $state['duosecurity:akey'] = $this->_akey;
-        $state['duosecurity:ikey'] = $this->_ikey;
-        $state['duosecurity:skey'] = $this->_skey;
-        $state['duosecurity:host'] = $this->_host;
-        $state['duosecurity:authSources'] = $this->_authSources;
-        $state['duosecurity:usernameAttribute'] = $this->_usernameAttribute;
+        $state['duouniversal:akey'] = $this->_akey;
+        $state['duouniversal:ikey'] = $this->_ikey;
+        $state['duouniversal:skey'] = $this->_skey;
+        $state['duouniversal:host'] = $this->_host;
+        $state['duouniversal:authSources'] = $this->_authSources;
+        $state['duouniversal:usernameAttribute'] = $this->_usernameAttribute;
 
         // User interaction nessesary. Throw exception on isPassive request	
         if (isset($state['isPassive']) && $state['isPassive'] == true) {
@@ -137,8 +137,8 @@ class sspmod_duosecurity_Auth_Process_Duosecurity extends SimpleSAML_Auth_Proces
         }
 
         // Save state and redirect
-        $id  = SimpleSAML_Auth_State::saveState($state, 'duosecurity:request');
-        $url = SimpleSAML_Module::getModuleURL('duosecurity/getduo.php');
+        $id  = SimpleSAML_Auth_State::saveState($state, 'duouniversal:request');
+        $url = SimpleSAML_Module::getModuleURL('duouniversal/getduo.php');
         SimpleSAML_Utilities::redirectTrustedURL($url, array('StateId' => $id));
     }
 }
