@@ -6,7 +6,7 @@
  *
  * @package simpleSAMLphp
  */
-class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML_Auth_ProcessingFilter
+class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\ProcessingFilter
 {
 
     /**
@@ -94,7 +94,7 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML_Auth_Proc
         $spEntityId = $state['Destination']['entityid'];
         $idpEntityId = $state['Source']['entityid'];
 
-        $metadata = SimpleSAML_Metadata_MetaDataStorageHandler::getMetadataHandler();
+        $metadata = SimpleSAML\Metadata\MetaDataStorageHandler::getMetadataHandler();
 
         /**
          * If the Duo Universal module is active on a bridge $state['saml:sp:IdP']
@@ -109,7 +109,7 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML_Auth_Proc
         }
 
         // Get idP session from auth request
-        $session = SimpleSAML_Session::getSessionFromRequest();
+        $session = SimpleSAML\Session::getSessionFromRequest();
 
         // Has user already passed DUO authorization in this idP session instance?
         $isAuthorized = $session->getData('duouniversal:request', 'is_authorized');
@@ -131,14 +131,14 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML_Auth_Proc
 
         // User interaction nessesary. Throw exception on isPassive request	
         if (isset($state['isPassive']) && $state['isPassive'] == true) {
-            throw new SimpleSAML_Error_NoPassive(
+            throw new SimpleSAML\Module\saml\Error\NoPassive(
                 'Unable to login with passive request.'
             );
         }
 
         // Save state and redirect
-        $id  = SimpleSAML_Auth_State::saveState($state, 'duouniversal:request');
-        $url = SimpleSAML_Module::getModuleURL('duouniversal/getduo.php');
-        SimpleSAML_Utilities::redirectTrustedURL($url, array('StateId' => $id));
+        $id  = \SimpleSAML\Auth\State::saveState($state, 'duouniversal:request');
+        $url = \SimpleSAML\Module::getModuleURL('duouniversal/getduo.php');
+        \SimpleSAML\Utils\HTTP::redirectTrustedURL($url, array('StateId' => $id));
     }
 }

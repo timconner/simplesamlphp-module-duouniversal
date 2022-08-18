@@ -47,14 +47,14 @@ if (isset($_POST['sig_response'])) {
         $username = $attributes[$username_attribute][0];
     }
     else {
-        throw new SimpleSAML_Error_BadRequest('Missing required username attribute.');
+        throw new SimpleSAML\Error\BadRequest('Missing required username attribute.');
     }
 
     if ($resp != NULL and $resp === $username) {
-        SimpleSAML_Auth_ProcessingChain::resumeProcessing($this->data['state']);
+        SimpleSAML\Auth\ProcessingChain::resumeProcessing($this->data['state']);
     }
     else {
-        throw new SimpleSAML_Error_BadRequest('Response verification failed.');
+        throw new SimpleSAML\Error\BadRequest('Response verification failed.');
     }
 }
 
