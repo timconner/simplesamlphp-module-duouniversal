@@ -1,4 +1,15 @@
-simplesamlphp-duosecurity
+simplesamlphp-duouniversal
+==========================
+Two-factor authentication module using Duo Security Universal Prompt for SimpleSAMLphp.
+Nowhere near production-ready.
+
+Based on original Duo Security module by Kevin Nastase, forked by Scott Carlson.
+
+- https://github.com/knastase/simplesamlphp-duosecurity
+- https://github.com/scottcarlson/simplesamlphp-duosecurity
+
+-----
+OLD README: simplesamlphp-duosecurity
 =========================
 
 Two factor authentication module using Duo Security for SimpleSAMLphp
