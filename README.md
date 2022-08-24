@@ -1,46 +1,38 @@
-simplesamlphp-duouniversal
+simplesamlphp-module-duouniversal
 ==========================
 Two-factor authentication module using Duo Security Universal Prompt for SimpleSAMLphp.
-Nowhere near production-ready.
 
-Based on original Duo Security module by Kevin Nastase, forked by Scott Carlson.
+### This module is still in development and is not production-ready, use at your own risk!
+
+# Installation
+1. Clone this repository and ensure the user running your SimpleSAMLphp installation can read and execute the repo files.
+2. Add a path repository to the composer.json file in the root of your SimpleSAMLphp installation. Set `url` to point to the location of the repository on the filesystem of your deployment.
+```json
+"repositories": [
+  {
+    "type": "path",
+    "url": "/path/to/this/repo"
+  }
+]
+```
+4. `cd` into the root of your SimpleSAMLphp installation
+5. run `composer require "0x0fbc\simplesamlphp-module-duouniversal @dev"`
+6. Copy the configuration template from the `config-templates` directory of this repo to the config directory of your SimpleSAMLphp deployment.
+7. Create (if you haven't already) a Duo Universal WebSDKv4 application in the "applications" section of your Duo deployment's admin console and set the following values in the config:
+   1. `ikey` to the "Client ID"
+   2. `skey` to the "Client Secret"
+   3. `host` to the "API hostname"
+   4. `username` to the SAML attribute which correlates to usernames in your Duo deployment.
+8. Add an entry into the authentication processing filter chain with the following contents:
+```php
+array(
+    'class' => 'duouniversal:Duouniversal',
+),
+```
+
+This will enable the module for the IdP/SP of your choice (or globally if you insert it into the authproc chain in the SimpleSAML global config.php). Currently, all configuration values are global and cannot be configured to use different values per-SP/IdP. By selectively choosing where in the authproc chain the module is added, one can enable/disable it for different IdPs/SPs.
+
+Based on the original Duo Security module by Kevin Nastase, as forked by Scott Carlson.
 
 - https://github.com/knastase/simplesamlphp-duosecurity
 - https://github.com/scottcarlson/simplesamlphp-duosecurity
-
------
-OLD README: simplesamlphp-duosecurity
-=========================
-
-Two factor authentication module using Duo Security for SimpleSAMLphp
-
-Usage:
-Rename the folder to duosecurity and place in your SimpleSAMLphp modules folder
-
-Set up a Web SDK integration on your Duo admin website.
-see https://www.duosecurity.com/docs/duoweb for more information
-
-In config/config.php, activate the Duo Security module by adding it to the
-authentication filters section. (under 'authproc.idp')
-
-            80 => array(
-
-                'class' => 'duosecurity:Duosecurity',
-            
-                'akey' => 'SECRET KEY UNIQUE TO YOUR APP MUST BE 40 CHARACTERS',
-            
-                // The following values can be found on your Duo admin page
-            
-                'ikey' => '',
-            
-                'skey' => '',
-            
-                'host' => '',
-
-                // Specify the attribute to be used as the Duo username
-
-                'usernameAttribute' => '',
-
-            ),
-
-Do not change the names of any files in the module

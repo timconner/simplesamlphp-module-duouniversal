@@ -1,0 +1,15 @@
+{
+    "name": "0x0fbc/simplesamlphp-module-duouniversal",
+    "description": "Add two-factor authentication with the Duo Universal Prompt to SimpleSAMLphp.",
+    "type": "simplesamlphp-module",
+    "license": "MIT",
+    "require": {
+        "simplesamlphp/composer-module-installer": "~1.0",
+        "duosecurity/duo_universal_php": "1.0.1"
+    },
+    "config": {
+        "allow-plugins": {
+            "simplesamlphp/composer-module-installer": true
+        }
+    }
+}

@@ -26,9 +26,13 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
 
     private $_host;
 
-    private $_authSources = "all";
+    private $_authSources = 'all';
 
-    private $_usernameAttribute = "username";
+    private $_usernameAttribute = 'username';
+
+    private $_duoClient = null;
+
+    private $_storePrefix = 'duouniversal:';
 
     /**
      * Initialize Duo Universal
@@ -42,17 +46,24 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
         parent::__construct($config, $reserved);
         assert('is_array($config)');
 
-        $this->_host = $config['host'];
-        $this->_akey = $config['akey'];
-        $this->_ikey = $config['ikey'];
-        $this->_skey = $config['skey'];
+        // Fetch the store prefix and api information from the module config.
+        $duoConfig = SimpleSaml\Configuration::getConfig('moduleDuouniversal.php');
+        $this->_storePrefix = $duoConfig->getValue('storePrefix', 'duouniversal');
 
-        if (array_key_exists('authSources', $config)) {
-            $this->_authSources = $config['authSources'];
-        }
+        $this->_host = $duoConfig->getValue('host');
+        $this->_ikey = $duoConfig->getValue('ikey');
+        $this->_skey = $duoConfig->getValue('skey');
+        $this->_usernameAttribute = $duoConfig->getValue('usernameAttribute');
 
-        if (array_key_exists('usernameAttribute', $config)) {
-            $this->_usernameAttribute = $config['usernameAttribute'];
+        try {
+            $this->_duoClient = new Duo\DuoUniversal\Client(
+                $this->_ikey,
+                $this->_skey,
+                $this->_host,
+                \SimpleSAML\Module::getModuleURL('duouniversal/duocallback.php')
+            );
+        } catch (\Duo\DuoUniversal\DuoException $ex) {
+            throw new \SimpleSAML\Error\Exception('Duo configuration error: ' . $ex->getMessage());
         }
     }
 
@@ -86,7 +97,7 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
         assert('is_array($state)');
         assert('array_key_exists("Destination", $state)');
         assert('array_key_exists("entityid", $state["Destination"])');
-        assert('array_key_exists("metadata-set", $state["Destination"])');		
+        assert('array_key_exists("metadata-set", $state["Destination"])');
         assert('array_key_exists("Source", $state)');
         assert('array_key_exists("entityid", $state["Source"])');
         assert('array_key_exists("metadata-set", $state["Source"])');
@@ -121,24 +132,41 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
 
         $session->setData('duouniversal:request', 'is_authorized', false);
 
-        // Set Keys for Duo SDK
-        $state['duouniversal:akey'] = $this->_akey;
-        $state['duouniversal:ikey'] = $this->_ikey;
-        $state['duouniversal:skey'] = $this->_skey;
-        $state['duouniversal:host'] = $this->_host;
-        $state['duouniversal:authSources'] = $this->_authSources;
-        $state['duouniversal:usernameAttribute'] = $this->_usernameAttribute;
-
-        // User interaction nessesary. Throw exception on isPassive request	
+        // User interaction necessary. Throw exception on isPassive request
         if (isset($state['isPassive']) && $state['isPassive'] == true) {
             throw new SimpleSAML\Module\saml\Error\NoPassive(
                 'Unable to login with passive request.'
             );
         }
 
-        // Save state and redirect
-        $id  = \SimpleSAML\Auth\State::saveState($state, 'duouniversal:request');
-        $url = \SimpleSAML\Module::getModuleURL('duouniversal/getduo.php');
-        \SimpleSAML\Utils\HTTP::redirectTrustedURL($url, array('StateId' => $id));
+        //
+        if (isset($state['Attributes'][$this->_usernameAttribute][0])) {
+            $username = $state['Attributes'][$this->_usernameAttribute][0];
+        }
+        else {
+            throw new SimpleSAML\Error\BadRequest('Missing required username attribute.');
+        }
+
+        try {
+            $this->_duoClient->healthCheck();
+        } catch (\Duo\DuoUniversal\DuoException $ex) {
+
+        }
+
+        # Generate Duo state nonce and store in current SimplesspSAML auth state.
+        $duoNonce = $this->_duoClient->generateState();
+        $state['duouniversal:duoNonce'] = $duoNonce;
+
+        # Save the current ssp state and get the state ID.
+        $stateId = \SimpleSAML\Auth\State::saveState($state, 'duouniversal:duoRedirect');
+
+        # Get an instance of the SimpleSAML store
+        $store = SimpleSAML\Store::getInstance();
+
+        # Save the state ID in the store under Duo nonce generated earlier.
+        $state_id_key = $this->_storePrefix . ':' . $duoNonce;
+        $store->set('string', $state_id_key, $stateId, time() + 300);
+        $promptUrl = $this->_duoClient->createAuthUrl($username, $duoNonce);
+        \SimpleSAML\Utils\HTTP::redirectTrustedURL($promptUrl);
     }
 }
