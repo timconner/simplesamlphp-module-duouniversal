@@ -17,8 +17,8 @@ session_cache_limiter('nocache');
 
 // Check for Duo errors in callback
 if (isset($_GET['error'])) {
-    $error_msg = $_GET['error'] . ':' . $_GET['error_description'];
-    throw new BadRequest('Error response from Duo during authentication: ' . $error_msg);
+    $duoError = $_GET['error'] . ':' . $_GET['error_description'];
+    throw new BadRequest('Error response from Duo during authentication: ' . $duoError);
 }
 
 // Ensure we got back a Duo code and state nonce
