@@ -12,6 +12,7 @@ use SimpleSAML\Error\ConfigurationError;
 use SimpleSAML\Error\Exception as SimpleSAMLException;
 use SimpleSAML\Module;
 
+// Signal to clients/proxies to not cache this page.
 session_cache_limiter('nocache');
 
 // Check for Duo errors in callback
@@ -25,11 +26,11 @@ if (!isset($_GET['duo_code']) || !isset($_GET['state'])) {
     throw new BadRequest('Invalid response from Duo');
 }
 
+// Get the returned code and nonce from the Duo authentication redirect.
 $duoCode = $_GET['duo_code'];
 $duoNonce = $_GET['state'];
 
-// Bootstrap config and state information for interacting with Duo to deal with callback redirect.
-// Fetch duo  information from the module config.
+// Load module configuration
 $duoConfig = SimpleSaml\Configuration::getConfig("moduleDuouniversal.php");
 $duoStorePrefix = $duoConfig->getValue('storePrefix', 'duouniversal');
 
@@ -38,6 +39,7 @@ $ikey = $duoConfig->getValue('ikey');
 $skey = $duoConfig->getValue('skey');
 $usernameAttribute = $duoConfig->getValue('usernameAttribute');
 
+// Set up a new Duo Client for validating the returned Duo code.
 try {
     $duoClient = new Duo\DuoUniversal\Client(
         $ikey,
@@ -49,21 +51,28 @@ try {
     throw new ConfigurationError('Duo configuration error: ' . $ex->getMessage());
 }
 
-// Try retrieving an SSP state ID with the provided Duo nonce.
+// Bootstrap authentication state by retrieving an SSP state ID using the Duo nonce provided by the
+// Duo authentication redirect.
 try {
     $store = SimpleSAML\Store::getInstance();
-    $stateId = $store->get('string', $duoStorePrefix . ':'. $duoNonce);
+    $stateID = $store->get('string', $duoStorePrefix . ':'. $duoNonce);
 } catch (Exception $ex) {
     throw new SimpleSAMLException('Failure loading SimpleSAML state');
 }
+
 // If the duo nonce isn't associated with an SSP state ID, the auth is invalid.
-if (!isset($stateId) ){
+if (!isset($stateID) ){
     throw new SimpleSAMLException('No state with Duo nonce ' . $duoNonce);
 }
-$state = Auth\State::loadState($stateId, 'duouniversal:duoRedirect');
+
+// Fetch the state using the retrieved SSP state ID.
+$state = Auth\State::loadState($stateID, 'duouniversal:duoRedirect');
 if (!isset($state)) {
+    // If loadState doesn't find a state, it returns null, so we have to check and throw our own exception.
     throw new SimpleSAMLException('No state with Duo nonce ' . $duoNonce);
 }
+
+// Check that the retrieved state has an associated Duo nonce.
 if (!isset($state['duouniversal:duoNonce'])) {
     throw new SimpleSAMLException('Retrieved state is missing Duo nonce');
 }

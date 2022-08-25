@@ -43,7 +43,9 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
      *
      * Validates and parses the configuration
      *
-     * @param array $config   Configuration information
+     * @param array $config Configuration information
+     * @param mixed $reserved
+     * @throws \SimpleSAML\Error\Exception
      */
     public function __construct($config, $reserved)
     {
@@ -75,7 +77,6 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
      * Helper function to check whether Duo is disabled.
      *
      * @param mixed $option  The consent.disable option. Either an array or a boolean.
-     * @param string $entityIdD  The entityID of the SP/IdP.
      * @return boolean  TRUE if disabled, FALSE if not.
      */
     private static function checkDisable($option, $entityId) {
@@ -95,6 +96,11 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
      * @param array &$state The state of the response.
      *
      * @return void
+     * @throws \SimpleSAML\Error\BadRequest
+     * @throws Duo\DuoUniversal\DuoException
+     * @throws SimpleSAML\Module\saml\Error\NoPassive
+     * @throws \SimpleSAML\Error\CriticalConfigurationError
+     * @throws \SimpleSAML\Error\MetadataNotFound
      */
     public function process(&$state)
     {
@@ -136,12 +142,12 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
 
         $session->setData('duouniversal:request', 'is_authorized', false);
 
-        // User interaction necessary. Throw exception on isPassive request
+        // User interaction with Duo is required, so we throw NoPassive on isPassive request.
         if (isset($state['isPassive']) && $state['isPassive'] == true) {
             throw new NoPassive('Unable to login with passive request.');
         }
 
-        //
+        // Fetch username for Duo from attributes based on configured username attribute.
         if (isset($state['Attributes'][$this->_usernameAttribute][0])) {
             $username = $state['Attributes'][$this->_usernameAttribute][0];
         }
@@ -149,25 +155,25 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
             throw new BadRequest('Missing required username attribute.');
         }
 
-        try {
-            $this->_duoClient->healthCheck();
-        } catch (DuoException $ex) {
+        // Check if Duo API connection is functional, this will throw a DuoException to indicate failure.
+        $this->_duoClient->healthCheck();
 
-        }
 
-        # Generate Duo state nonce and store in current SimplesspSAML auth state.
+        // Generate Duo state nonce and store in current SimpleSAML auth state.
         $duoNonce = $this->_duoClient->generateState();
         $state['duouniversal:duoNonce'] = $duoNonce;
 
-        # Save the current ssp state and get the state ID.
+        // Save the current ssp state and get a state ID.
         $stateId = State::saveState($state, 'duouniversal:duoRedirect');
 
-        # Get an instance of the SimpleSAML store
+        // Get an instance of the SimpleSAML store
         $store = Store::getInstance();
 
-        # Save the state ID in the store under Duo nonce generated earlier.
+        // Save the SimpleSAML state ID in the store under the Duo nonce generated earlier.
         $stateIDKey = $this->_storePrefix . ':' . $duoNonce;
         $store->set('string', $stateIDKey, $stateId, time() + 300);
+
+        // Build a Duo URL for this authentication and redirect.
         $promptUrl = $this->_duoClient->createAuthUrl($username, $duoNonce);
         HTTP::redirectTrustedURL($promptUrl);
     }
