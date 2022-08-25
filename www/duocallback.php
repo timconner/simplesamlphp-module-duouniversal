@@ -34,17 +34,17 @@ $duoNonce = $_GET['state'];
 $duoConfig = SimpleSaml\Configuration::getConfig("moduleDuouniversal.php");
 $duoStorePrefix = $duoConfig->getValue('storePrefix', 'duouniversal');
 
-$host = $duoConfig->getValue('host');
-$ikey = $duoConfig->getValue('ikey');
-$skey = $duoConfig->getValue('skey');
+$apiHost = $duoConfig->getValue('apiHost');
+$clientID = $duoConfig->getValue('clientID');
+$clientSecret = $duoConfig->getValue('clientSecret');
 $usernameAttribute = $duoConfig->getValue('usernameAttribute');
 
 // Set up a new Duo Client for validating the returned Duo code.
 try {
     $duoClient = new Duo\DuoUniversal\Client(
-        $ikey,
-        $skey,
-        $host,
+        $clientID,
+        $clientSecret,
+        $apiHost,
         Module::getModuleURL('duouniversal/duocallback.php')
     );
 } catch (DuoException $ex) {
