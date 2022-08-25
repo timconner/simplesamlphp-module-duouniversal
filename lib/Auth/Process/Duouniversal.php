@@ -1,4 +1,16 @@
 <?php
+
+use Duo\DuoUniversal\DuoException;
+use SimpleSAML\Auth\State;
+use SimpleSAML\Error\BadRequest;
+use SimpleSAML\Error\Exception as SimpleSAMLException;
+use SimpleSAML\Metadata\MetaDataStorageHandler;
+use SimpleSAML\Module;
+use SimpleSAML\Module\saml\Error\NoPassive;
+use SimpleSAML\Session;
+use SimpleSAML\Store;
+use SimpleSAML\Utils\HTTP;
+
 /**
  * Duo Universal Authentication Processing filter
  *
@@ -14,19 +26,11 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
      *
      * @var bool
      */
-    private $_includeValues = false;
-
-    private $_duoComplete = null;
-
-    private $_akey;
-
     private $_ikey;
 
     private $_skey;
 
     private $_host;
-
-    private $_authSources = 'all';
 
     private $_usernameAttribute = 'username';
 
@@ -60,10 +64,10 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
                 $this->_ikey,
                 $this->_skey,
                 $this->_host,
-                \SimpleSAML\Module::getModuleURL('duouniversal/duocallback.php')
+                Module::getModuleURL('duouniversal/duocallback.php')
             );
-        } catch (\Duo\DuoUniversal\DuoException $ex) {
-            throw new \SimpleSAML\Error\Exception('Duo configuration error: ' . $ex->getMessage());
+        } catch (DuoException $ex) {
+            throw new SimpleSAMLException('Duo configuration error: ' . $ex->getMessage());
         }
     }
 
@@ -105,7 +109,7 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
         $spEntityId = $state['Destination']['entityid'];
         $idpEntityId = $state['Source']['entityid'];
 
-        $metadata = SimpleSAML\Metadata\MetaDataStorageHandler::getMetadataHandler();
+        $metadata = MetaDataStorageHandler::getMetadataHandler();
 
         /**
          * If the Duo Universal module is active on a bridge $state['saml:sp:IdP']
@@ -120,7 +124,7 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
         }
 
         // Get idP session from auth request
-        $session = SimpleSAML\Session::getSessionFromRequest();
+        $session = Session::getSessionFromRequest();
 
         // Has user already passed DUO authorization in this idP session instance?
         $isAuthorized = $session->getData('duouniversal:request', 'is_authorized');
@@ -134,9 +138,7 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
 
         // User interaction necessary. Throw exception on isPassive request
         if (isset($state['isPassive']) && $state['isPassive'] == true) {
-            throw new SimpleSAML\Module\saml\Error\NoPassive(
-                'Unable to login with passive request.'
-            );
+            throw new NoPassive('Unable to login with passive request.');
         }
 
         //
@@ -144,12 +146,12 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
             $username = $state['Attributes'][$this->_usernameAttribute][0];
         }
         else {
-            throw new SimpleSAML\Error\BadRequest('Missing required username attribute.');
+            throw new BadRequest('Missing required username attribute.');
         }
 
         try {
             $this->_duoClient->healthCheck();
-        } catch (\Duo\DuoUniversal\DuoException $ex) {
+        } catch (DuoException $ex) {
 
         }
 
@@ -158,15 +160,15 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
         $state['duouniversal:duoNonce'] = $duoNonce;
 
         # Save the current ssp state and get the state ID.
-        $stateId = \SimpleSAML\Auth\State::saveState($state, 'duouniversal:duoRedirect');
+        $stateId = State::saveState($state, 'duouniversal:duoRedirect');
 
         # Get an instance of the SimpleSAML store
-        $store = SimpleSAML\Store::getInstance();
+        $store = Store::getInstance();
 
         # Save the state ID in the store under Duo nonce generated earlier.
-        $state_id_key = $this->_storePrefix . ':' . $duoNonce;
-        $store->set('string', $state_id_key, $stateId, time() + 300);
+        $stateIDKey = $this->_storePrefix . ':' . $duoNonce;
+        $store->set('string', $stateIDKey, $stateId, time() + 300);
         $promptUrl = $this->_duoClient->createAuthUrl($username, $duoNonce);
-        \SimpleSAML\Utils\HTTP::redirectTrustedURL($promptUrl);
+        HTTP::redirectTrustedURL($promptUrl);
     }
 }
