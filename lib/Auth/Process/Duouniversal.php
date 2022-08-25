@@ -129,19 +129,6 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
             $state['Source'] = $idpmeta;
         }
 
-        // Get idP session from auth request
-        $session = Session::getSessionFromRequest();
-
-        // Has user already passed DUO authorization in this idP session instance?
-        $isAuthorized = $session->getData('duouniversal:request', 'is_authorized');
-
-        // Bypass DUO if already authenticated with the idP and DUO
-        if (isset($state['AuthnInstant']) && $isAuthorized) {
-            return;
-        }
-
-        $session->setData('duouniversal:request', 'is_authorized', false);
-
         // User interaction with Duo is required, so we throw NoPassive on isPassive request.
         if (isset($state['isPassive']) && $state['isPassive'] == true) {
             throw new NoPassive('Unable to login with passive request.');
