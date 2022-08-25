@@ -14,7 +14,7 @@ use SimpleSAML\Utils\HTTP;
 /**
  * Duo Universal Authentication Processing filter
  *
- * Filter to present Duo two factor authentication form
+ * Filter to redirect users to the Duo Universal prompt for two-factor authentication.
  *
  * @package simpleSAMLphp
  */
