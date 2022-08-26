@@ -18,7 +18,7 @@ Two-factor authentication module using Duo Security Universal Prompt for SimpleS
 4. `cd` into the root of your SimpleSAMLphp installation
 5. run `composer require "0x0fbc\simplesamlphp-module-duouniversal @dev"`
 6. Copy the configuration template from the `config-templates` directory of this repo to the config directory of your SimpleSAMLphp deployment.
-7. Create (if you haven't already) a Duo Universal WebSDKv4 application in the "applications" section of your Duo deployment's admin console and set the following values in the config:
+7. Create (if you haven't already) a Duo Universal WebSDKv4 application in the "applications" section of your Duo deployment's admin console and set the following values in the `defaultDuoApp` section of the config:
    1. `clientID` to the "Client ID"
    2. `clientSecret` to the "Client Secret"
    3. `apiHost` to the "API hostname"
