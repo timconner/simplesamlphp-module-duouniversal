@@ -18,7 +18,7 @@ class sspmod_duouniversal_Utils
     public static function resolveDuoAppConfig(Configuration $duoConfig, string $entityID): ?array {
         $defaultDuoApp = $duoConfig->getValue('defaultDuoApp');
         $spDuoOverrides =  $duoConfig->getValue('spDuoOverrides');
-        $alternateDuoApps = $duoConfig->getValue('alternateDuoApps');
+        $alternateDuoApps = $duoConfig->getValue('alternateDuoApps', []);
 
         // A default app is required
         if (is_null($defaultDuoApp)) {
@@ -32,7 +32,7 @@ class sspmod_duouniversal_Utils
             return sspmod_duouniversal_Utils::validateDuoAppConfig($defaultDuoApp, 'defaultDuoApp');
         }
 
-        $overrideAppName = $spDuoOverrides[$entityID];
+        $overrideAppName = $spDuoOverrides[$entityID] ?? null;
 
         // If the override app name is 'bypass', return null to indicate this EntityID should bypass Duo.
         if ($overrideAppName == 'bypass') {
@@ -42,8 +42,8 @@ class sspmod_duouniversal_Utils
             return  sspmod_duouniversal_Utils::validateDuoAppConfig($alternateDuoApps[$overrideAppName],
                                                                     $overrideAppName);
         } else {
-            // Fall back to the default as to not fail open.
-            return sspmod_duouniversal_Utils::validateDuoAppConfig($defaultDuoApp, 'defaultDuoApp');
+            $m = 'Undefined alternateDuoApp ' . $overrideAppName . ' for EntityID ' . $entityID;
+            throw new ConfigurationError($m);
         }
     }
 
