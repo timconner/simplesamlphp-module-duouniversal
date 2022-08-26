@@ -30,7 +30,9 @@ array(
 ),
 ```
 
-This will enable the module for the IdP/SP of your choice (or globally if you insert it into the authproc chain in the SimpleSAML global config.php). Currently, all configuration values are global and cannot be configured to use different values per-SP/IdP. By selectively choosing where in the authproc chain the module is added, one can enable/disable it for different IdPs/SPs.
+This will enable the module for the IdP/SP of your choice (or globally if you insert it into the authproc chain in the SimpleSAML global config.php).
+
+The Duo application config used by a particular SP can be changed from the default by adding additional named entries to the `alternateDuoApps` section of the config and then mapping SP EntityIDs to application names in `spDuoOverrides`. Duo can be bypassed per-SP by mapping the SP's EntityID to 'bypass' in the same section. See sthe comments in the `config-templates/module_duouniversal.php` file for examples.
 
 Based on the original Duo Security module by Kevin Nastase, as forked by Scott Carlson.
 
