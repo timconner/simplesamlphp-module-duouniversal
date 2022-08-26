@@ -27,7 +27,7 @@ class sspmod_duouniversal_Utils
 
         // No overrides configured or no override for this EntityID, return the default app config.
         $noOverridesSet = is_null($spDuoOverrides);
-        $noOverrideForEntityID = isset($spDuoOverrides[$entityID]);
+        $noOverrideForEntityID = !isset($spDuoOverrides[$entityID]);
         if ($noOverridesSet || $noOverrideForEntityID) {
             return sspmod_duouniversal_Utils::validateDuoAppConfig($defaultDuoApp, 'defaultDuoApp');
         }
