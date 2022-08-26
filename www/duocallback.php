@@ -5,6 +5,8 @@
  * @package simpleSAMLphp
  */
 
+use sspmod_duouniversal_Utils as DuUtils;
+
 use Duo\DuoUniversal\DuoException;
 use SimpleSAML\Auth;
 use SimpleSAML\Error\BadRequest;
@@ -30,26 +32,9 @@ if (!isset($_GET['duo_code']) || !isset($_GET['state'])) {
 $duoCode = $_GET['duo_code'];
 $duoNonce = $_GET['state'];
 
-// Load module configuration
-$duoConfig = SimpleSaml\Configuration::getConfig("moduleDuouniversal.php");
-$duoStorePrefix = $duoConfig->getValue('storePrefix', 'duouniversal');
-
-$apiHost = $duoConfig->getValue('apiHost');
-$clientID = $duoConfig->getValue('clientID');
-$clientSecret = $duoConfig->getValue('clientSecret');
-$usernameAttribute = $duoConfig->getValue('usernameAttribute');
-
-// Set up a new Duo Client for validating the returned Duo code.
-try {
-    $duoClient = new Duo\DuoUniversal\Client(
-        $clientID,
-        $clientSecret,
-        $apiHost,
-        Module::getModuleURL('duouniversal/duocallback.php')
-    );
-} catch (DuoException $ex) {
-    throw new ConfigurationError('Duo configuration error: ' . $ex->getMessage());
-}
+// Load module configuration and get storePrefix to start
+$moduleConfig = SimpleSaml\Configuration::getConfig("moduleDuouniversal.php");
+$duoStorePrefix = $moduleConfig->getValue('storePrefix', 'duouniversal');
 
 // Bootstrap authentication state by retrieving an SSP state ID using the Duo nonce provided by the
 // Duo authentication redirect.
@@ -82,6 +67,31 @@ if (!isset($state['duouniversal:duoNonce'])) {
 if ($state['duouniversal:duoNonce'] != $duoNonce) {
     $m = 'Duo nonce ' . $duoNonce . ' does not match nonce ' . $state['duouniversal:duoNonce']. 'from retrieved state.';
     throw new SimpleSAMLException($m);
+}
+
+// Now that we have a valid state we can get the SP Entity ID to resolve an override app config, if any.
+$duoAppConfig = DuUtils::resolveDuoAppConfig($moduleConfig, $state['Destination']['entityid']);
+
+if (is_null($duoAppConfig)) {
+    // This should never happen in this script, fail closed.
+    throw new ConfigurationError("Duo Callback received for bypassed EntityID.");
+}
+
+$clientID = $duoAppConfig['clientID'];
+$clientSecret = $duoAppConfig['clientSecret'];
+$apiHost = $duoAppConfig['apiHost'];
+$usernameAttribute = $duoAppConfig['usernameAttribute'];
+
+// Set up a new Duo Client for validating the returned Duo code.
+try {
+    $duoClient = new Duo\DuoUniversal\Client(
+        $clientID,
+        $clientSecret,
+        $apiHost,
+        Module::getModuleURL('duouniversal/duocallback.php')
+    );
+} catch (DuoException $ex) {
+    throw new ConfigurationError('Duo configuration error: ' . $ex->getMessage());
 }
 
 // Call Duo API and check token.

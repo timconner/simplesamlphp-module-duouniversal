@@ -1,6 +1,9 @@
 <?php
 
+use sspmod_duouniversal_Utils as DuUtils;
+
 use Duo\DuoUniversal\DuoException;
+use SimpleSAML\Auth;
 use SimpleSAML\Auth\State;
 use SimpleSAML\Error\BadRequest;
 use SimpleSAML\Error\Exception as SimpleSAMLException;
@@ -21,22 +24,7 @@ use SimpleSAML\Utils\HTTP;
 class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\ProcessingFilter
 {
 
-    /**
-     * Include attribute values
-     *
-     * @var bool
-     */
-    private $clientID;
-
-    private $clientSecret;
-
-    private $apiHost;
-
-    private $usernameAttribute = 'username';
-
-    private $duoClient = null;
-
-    private $storePrefix = 'duouniversal';
+    private $moduleConfig;
 
     /**
      * Initialize Duo Universal
@@ -50,27 +38,9 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
     public function __construct($config, $reserved)
     {
         parent::__construct($config, $reserved);
-        assert('is_array($config)');
 
         // Fetch the store prefix and api information from the module config.
-        $duoConfig = SimpleSaml\Configuration::getConfig('moduleDuouniversal.php');
-        $this->storePrefix = $duoConfig->getValue('storePrefix', 'duouniversal');
-
-        $this->apiHost = $duoConfig->getValue('apiHost');
-        $this->clientID = $duoConfig->getValue('clientID');
-        $this->clientSecret = $duoConfig->getValue('clientSecret');
-        $this->usernameAttribute = $duoConfig->getValue('usernameAttribute');
-
-        try {
-            $this->duoClient = new Duo\DuoUniversal\Client(
-                $this->clientID,
-                $this->clientSecret,
-                $this->apiHost,
-                Module::getModuleURL('duouniversal/duocallback.php')
-            );
-        } catch (DuoException $ex) {
-            throw new SimpleSAMLException('Duo configuration error: ' . $ex->getMessage());
-        }
+        $this->moduleConfig = SimpleSaml\Configuration::getConfig('moduleDuouniversal.php');
     }
 
     /**
@@ -104,14 +74,6 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
      */
     public function process(&$state)
     {
-        assert('is_array($state)');
-        assert('array_key_exists("Destination", $state)');
-        assert('array_key_exists("entityid", $state["Destination"])');
-        assert('array_key_exists("metadata-set", $state["Destination"])');
-        assert('array_key_exists("Source", $state)');
-        assert('array_key_exists("entityid", $state["Source"])');
-        assert('array_key_exists("metadata-set", $state["Source"])');
-
         $spEntityId = $state['Destination']['entityid'];
         $idpEntityId = $state['Source']['entityid'];
 
@@ -134,20 +96,46 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
             throw new NoPassive('Unable to login with passive request.');
         }
 
+        // Determine the correct Duo application to use and set configuration.
+        $duoAppConfig = DuUtils::resolveDuoAppConfig($this->moduleConfig, $spEntityId);
+
+        // Bypass Duo auth if the app config returned is null.
+        if (is_null($duoAppConfig)) {
+            Auth\ProcessingChain::resumeProcessing($state);
+        }
+
+        // Set up Duo client based on resolved app config
+        $clientID = $duoAppConfig['clientID'];
+        $clientSecret = $duoAppConfig['clientSecret'];
+        $apiHost = $duoAppConfig['apiHost'];
+        $usernameAttribute = $duoAppConfig['usernameAttribute'];
+        $storePrefix = $this->moduleConfig->getValue('storePrefix') ?? "duouniversal";
+
+        try {
+            $duoClient = new Duo\DuoUniversal\Client(
+                $clientID,
+                $clientSecret,
+                $apiHost,
+                Module::getModuleURL('duouniversal/duocallback.php')
+            );
+        } catch (DuoException $ex) {
+            throw new SimpleSAMLException('Duo configuration error: ' . $ex->getMessage());
+        }
+
         // Fetch username for Duo from attributes based on configured username attribute.
-        if (isset($state['Attributes'][$this->usernameAttribute][0])) {
-            $username = $state['Attributes'][$this->usernameAttribute][0];
+        if (isset($state['Attributes'][$usernameAttribute][0])) {
+            $username = $state['Attributes'][$usernameAttribute][0];
         }
         else {
             throw new BadRequest('Missing required username attribute.');
         }
 
         // Check if Duo API connection is functional, this will throw a DuoException to indicate failure.
-        $this->duoClient->healthCheck();
+        $duoClient->healthCheck();
 
 
         // Generate Duo state nonce and store in current SimpleSAML auth state.
-        $duoNonce = $this->duoClient->generateState();
+        $duoNonce = $duoClient->generateState();
         $state['duouniversal:duoNonce'] = $duoNonce;
 
         // Save the current ssp state and get a state ID.
@@ -157,11 +145,11 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
         $store = Store::getInstance();
 
         // Save the SimpleSAML state ID in the store under the Duo nonce generated earlier.
-        $stateIDKey = $this->storePrefix . ':' . $duoNonce;
+        $stateIDKey = $storePrefix . ':' . $duoNonce;
         $store->set('string', $stateIDKey, $stateId, time() + 300);
 
         // Build a Duo URL for this authentication and redirect.
-        $promptUrl = $this->duoClient->createAuthUrl($username, $duoNonce);
+        $promptUrl = $duoClient->createAuthUrl($username, $duoNonce);
         HTTP::redirectTrustedURL($promptUrl);
     }
 }
