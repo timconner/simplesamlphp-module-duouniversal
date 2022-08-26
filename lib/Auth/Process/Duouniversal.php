@@ -75,7 +75,6 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
     public function process(&$state)
     {
         $spEntityId = $state['Destination']['entityid'];
-        $idpEntityId = $state['Source']['entityid'];
 
         $metadata = MetaDataStorageHandler::getMetadataHandler();
 
