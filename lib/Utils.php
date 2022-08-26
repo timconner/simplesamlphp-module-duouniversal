@@ -22,7 +22,7 @@ class sspmod_duouniversal_Utils
 
         // A default app is required
         if (is_null($defaultDuoApp)) {
-            throw new ConfigurationError('moduleDuouniversal.php config missing defaultDuoApp');
+            throw new ConfigurationError('module_duouniversal.php config missing defaultDuoApp');
         }
 
         // No overrides configured or no override for this EntityID, return the default app config.

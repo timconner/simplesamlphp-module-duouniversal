@@ -21,7 +21,7 @@ use SimpleSAML\Utils\HTTP;
  *
  * @package simpleSAMLphp
  */
-class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\ProcessingFilter
+class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\ProcessingFilter
 {
 
     private $moduleConfig;
@@ -40,7 +40,7 @@ class sspmod_duouniversal_Auth_Process_Duouniversal extends SimpleSAML\Auth\Proc
         parent::__construct($config, $reserved);
 
         // Fetch the store prefix and api information from the module config.
-        $this->moduleConfig = SimpleSaml\Configuration::getConfig('moduleDuouniversal.php');
+        $this->moduleConfig = SimpleSaml\Configuration::getConfig('module_duouniversal.php');
     }
 
     /**

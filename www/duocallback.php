@@ -33,7 +33,7 @@ $duoCode = $_GET['duo_code'];
 $duoNonce = $_GET['state'];
 
 // Load module configuration and get storePrefix to start
-$moduleConfig = SimpleSaml\Configuration::getConfig("moduleDuouniversal.php");
+$moduleConfig = SimpleSaml\Configuration::getConfig("module_duouniversal.php");
 $duoStorePrefix = $moduleConfig->getValue('storePrefix', 'duouniversal');
 
 // Bootstrap authentication state by retrieving an SSP state ID using the Duo nonce provided by the
