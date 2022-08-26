@@ -8,10 +8,11 @@ $config = array(
         'clientSecret' => '',           // Duo API Client Secret
         'apiHost' => '',                // Duo API hostname
         'usernameAttribute' => '',      // Attribute to use when contacting Duo
-        // 'storePrefix' => '',         // Prefix for keys sent to the SimpleSAML store, optional.
     ),
 
-    // List of applications to for spDuoOverrides
+    //'storePrefix' => '', // Prefix for stored Duo session information
+
+    // List of applications to for spDuoOverrides - optional
     'alternateDuoApps' => array(
         /*
         'strict' => array(
@@ -19,12 +20,11 @@ $config = array(
             'clientSecret' => '',
             'apiHost' => '',
             'usernameAttribute' => '',
-            'storePrefix' => '',
         )
         */
     ),
 
-    // Override the default Duo app per-SP EntityID.
+    // Override the default Duo app per-SP EntityID - optional
     // EntityIDs listed here will use the configuration from the corresponding defined in
     // alternateDuoApps.
     // Set the value to 'bypass' for SP EntityIDs which should not prompt Duo.
