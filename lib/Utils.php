@@ -56,7 +56,7 @@ class sspmod_duouniversal_Utils
      * @return array
      * @throws \SimpleSAML\Error\ConfigurationError
      */
-    public static function validateDuoAppConfig(array $duoAppConfig, string $configName = ''): array
+    private static function validateDuoAppConfig(array $duoAppConfig, string $configName = ''): array
     {
         $missing = array();
         if (!isset($duoAppConfig['clientID']) || $duoAppConfig['clientID'] == '') {
