@@ -1,8 +1,16 @@
 {
     "name": "0x0fbc/simplesamlphp-module-duouniversal",
-    "description": "Add two-factor authentication with the Duo Universal Prompt to SimpleSAMLphp.",
     "type": "simplesamlphp-module",
+    "description": "Add support for two-factor authentication with the Duo Universal Prompt (WebSDK v4) to SimpleSAMLphp.",
+    "keywords": ["simplesamlphp", "duo"],
+    "homepage": "https://github.com/0x0fbc/simplesamlphp-module-duouniversal",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Forest B. Crowley",
+            "email": "fbc@lehigh.edu"
+        }
+    ],
     "require": {
         "simplesamlphp/composer-module-installer": "~1.0",
         "duosecurity/duo_universal_php": "1.0.1"
