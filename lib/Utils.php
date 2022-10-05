@@ -2,6 +2,7 @@
 
 use Simplesaml\Configuration;
 use SimpleSAML\Error\ConfigurationError;
+use SimpleSAML\Logger;
 
 class sspmod_duouniversal_Utils
 {
@@ -22,14 +23,17 @@ class sspmod_duouniversal_Utils
 
         // A default app is required
         if (is_null($defaultDuoApp)) {
-            throw new ConfigurationError('module_duouniversal.php config missing defaultDuoApp');
+            Logger::error('module_duouniversal.php config missing defaultDuoApp');
+            throw new ConfigurationError("Server configuration invalid.");
         }
 
         // No overrides configured or no override for this EntityID, return the default app config.
         $noOverridesSet = is_null($spDuoOverrides);
         $noOverrideForEntityID = !isset($spDuoOverrides[$entityID]);
         if ($noOverridesSet || $noOverrideForEntityID) {
-            return sspmod_duouniversal_Utils::validateDuoAppConfig($defaultDuoApp, 'defaultDuoApp');
+            $resolvedConfig = $defaultDuoApp;
+            $resolvedConfig['name'] = 'default';
+            return sspmod_duouniversal_Utils::validateDuoAppConfig($resolvedConfig, 'defaultDuoApp');
         }
 
         $overrideAppName = $spDuoOverrides[$entityID] ?? null;
@@ -39,11 +43,13 @@ class sspmod_duouniversal_Utils
             return null;
         } else if (isset($alternateDuoApps[$overrideAppName])) {
             // There is an override app, return its configuration.
-            return  sspmod_duouniversal_Utils::validateDuoAppConfig($alternateDuoApps[$overrideAppName],
+            $resolvedConfig = $alternateDuoApps[$overrideAppName];
+            $resolvedConfig['name'] = $overrideAppName;
+            return  sspmod_duouniversal_Utils::validateDuoAppConfig($resolvedConfig,
                                                                     $overrideAppName);
         } else {
-            $m = 'Undefined alternateDuoApp ' . $overrideAppName . ' for EntityID ' . $entityID;
-            throw new ConfigurationError($m);
+            Logger::error('Undefined alternateDuoApp ' . $overrideAppName . ' for EntityID ' . $entityID);
+            throw new ConfigurationError("Server configuration invalid.");
         }
     }
 
@@ -74,8 +80,8 @@ class sspmod_duouniversal_Utils
         }
 
         if (!empty($missing)) {
-            $m = 'Duo app config ' . $configName . ' missing attributes: ' . implode(',', $missing);
-            throw new ConfigurationError($m);
+            Logger::error('Duo app config ' . $configName . ' missing attributes: ' . implode(',', $missing));
+            throw new ConfigurationError('Server configuration invalid.');
         } else {
             return $duoAppConfig;
         }

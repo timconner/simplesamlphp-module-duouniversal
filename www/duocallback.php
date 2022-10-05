@@ -12,25 +12,33 @@ use SimpleSAML\Auth;
 use SimpleSAML\Error\BadRequest;
 use SimpleSAML\Error\ConfigurationError;
 use SimpleSAML\Error\Exception as SimpleSAMLException;
+use SimpleSAML\Logger;
 use SimpleSAML\Module;
 
 // Signal to clients/proxies to not cache this page.
 session_cache_limiter('nocache');
+Logger::debug('Processing Duo callback...');
 
 // Check for Duo errors in callback
 if (isset($_GET['error'])) {
     $duoError = $_GET['error'] . ':' . $_GET['error_description'];
-    throw new BadRequest('Error response from Duo during authentication: ' . $duoError);
+    $m = 'Error response from Duo in callback';
+    Logger::error($m . ': ' . $duoError);
+    throw new BadRequest($m);
 }
 
 // Ensure we got back a Duo code and state nonce
 if (!isset($_GET['duo_code']) || !isset($_GET['state'])) {
-    throw new BadRequest('Invalid response from Duo');
+    $m = 'Invalid Duo callback, code or state missing.';
+    Logger::error($m);
+    throw new BadRequest($m);
 }
 
 // Get the returned code and nonce from the Duo authentication redirect.
 $duoCode = $_GET['duo_code'];
 $duoNonce = $_GET['state'];
+
+Logger::debug('Duo callback appears valid, retrieving associated state.');
 
 // Load module configuration and get storePrefix to start
 $moduleConfig = SimpleSaml\Configuration::getConfig("module_duouniversal.php");
@@ -42,30 +50,39 @@ try {
     $store = SimpleSAML\Store::getInstance();
     $stateID = $store->get('string', $duoStorePrefix . ':'. $duoNonce);
 } catch (Exception $ex) {
-    throw new SimpleSAMLException('Failure loading SimpleSAML state');
+    $m = 'Failed to load SimpleSAML state with nonce.';
+    Logger::error('Nonce: ' . $duoNonce . '; ' . $m);
+    throw new SimpleSAMLException($m);
 }
 
 // If the duo nonce isn't associated with an SSP state ID, the auth is invalid.
 if (!isset($stateID) ){
-    throw new SimpleSAMLException('No state with Duo nonce ' . $duoNonce);
+    $m = 'No state with Duo nonce.';
+    Logger::error('Nonce: ' . $duoNonce. '; '. $m);
+    throw new SimpleSAMLException($m);
 }
 
 // Fetch the state using the retrieved SSP state ID.
 $state = Auth\State::loadState($stateID, 'duouniversal:duoRedirect');
 if (!isset($state)) {
     // If loadState doesn't find a state, it returns null, so we have to check and throw our own exception.
-    throw new SimpleSAMLException('No state with Duo nonce ' . $duoNonce);
+    $m = 'No state with Duo nonce.';
+    Logger::error('Nonce: ' . $duoNonce. ';' . $m);
+    throw new SimpleSAMLException($m);
 }
 
 // Check that the retrieved state has an associated Duo nonce.
 if (!isset($state['duouniversal:duoNonce'])) {
-    throw new SimpleSAMLException('Retrieved state is missing Duo nonce');
+    $m = 'Retrieved state missing Duo nonce.';
+    Logger::error('Nonce: ' . $duoNonce . " State: " . $stateID . '; ' . $m);
+    throw new SimpleSAMLException($m);
 }
 
 // Double-check that the Duo nonce saved in the retrieved state matches the one we've retrieved from the
 // associated simplesamlphp auth state.
 if ($state['duouniversal:duoNonce'] != $duoNonce) {
-    $m = 'Duo nonce ' . $duoNonce . ' does not match nonce ' . $state['duouniversal:duoNonce']. 'from retrieved state.';
+    $m = 'Nonce: ' . $duoNonce . " State: " . $stateID . '; Nonce from retrieved state does not match callback nonce';
+    Logger::error($m);
     throw new SimpleSAMLException($m);
 }
 
@@ -74,13 +91,18 @@ $duoAppConfig = DuUtils::resolveDuoAppConfig($moduleConfig, $state['Destination'
 
 if (is_null($duoAppConfig)) {
     // This should never happen in this script, fail closed.
-    throw new ConfigurationError("Duo Callback received for bypassed EntityID.");
+    $m = "Duo callback retrieved for bypassed EntityID.";
+    Logger::critical('Nonce: ' . $duoNonce . " State: " . $stateID . '; ' . $m);
+    throw new ConfigurationError($m);
 }
 
 $clientID = $duoAppConfig['clientID'];
 $clientSecret = $duoAppConfig['clientSecret'];
 $apiHost = $duoAppConfig['apiHost'];
 $usernameAttribute = $duoAppConfig['usernameAttribute'];
+$duoAppName = $duoAppConfig['name'];
+
+Logger::debug('Validating Duo response with app config ' . $duoAppName);
 
 // Set up a new Duo Client for validating the returned Duo code.
 try {
@@ -91,15 +113,20 @@ try {
         Module::getModuleURL('duouniversal/duocallback.php')
     );
 } catch (DuoException $ex) {
-    throw new ConfigurationError('Duo configuration error: ' . $ex->getMessage());
+    $m = 'Error instantiating Duo client';
+    Logger::error($m . " " . $ex->getMessage());
+    throw new SimpleSAMLException($m);
 }
 
 // Call Duo API and check token.
 try {
     $decodedToken = $duoClient->exchangeAuthorizationCodeFor2FAResult($duoCode, $state['Attributes'][$usernameAttribute][0]);
 } catch (DuoException $ex ) {
-    throw new BadRequest("Error decoding Duo result: " . $ex);
+    $m = "Error decoding duo result.";
+    Logger::error($m . ' ' . $ex->getMessage());
+    throw new BadRequest($m);
 }
 
+Logger::debug('Duo verification successful, continuing authentication.');
 // If nothing has gone wrong, resume processing.
 Auth\ProcessingChain::resumeProcessing($state);

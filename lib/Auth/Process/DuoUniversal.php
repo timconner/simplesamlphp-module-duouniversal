@@ -7,6 +7,7 @@ use SimpleSAML\Auth;
 use SimpleSAML\Auth\State;
 use SimpleSAML\Error\BadRequest;
 use SimpleSAML\Error\Exception as SimpleSAMLException;
+use SimpleSAML\Logger;
 use SimpleSAML\Metadata\MetaDataStorageHandler;
 use SimpleSAML\Module;
 use SimpleSAML\Module\saml\Error\NoPassive;
@@ -92,16 +93,21 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
 
         // User interaction with Duo is required, so we throw NoPassive on isPassive request.
         if (isset($state['isPassive']) && $state['isPassive'] == true) {
-            throw new NoPassive('Unable to login with passive request.');
+            $m = 'Unable to login with passive request.';
+            Logger::error($m);
+            throw new NoPassive($m);
         }
 
         // Determine the correct Duo application to use and set configuration.
         $duoAppConfig = DuUtils::resolveDuoAppConfig($this->moduleConfig, $spEntityId);
-
         // Bypass Duo auth if the app config returned is null.
         if (is_null($duoAppConfig)) {
+            Logger::notice("Bypassing Duo prompt for $spEntityId");
             Auth\ProcessingChain::resumeProcessing($state);
         }
+
+        $duoAppName = $duoAppConfig['name'];
+        Logger::debug('Using Duo config ' . $duoAppName);
 
         // Set up Duo client based on resolved app config
         $clientID = $duoAppConfig['clientID'];
@@ -118,7 +124,9 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
                 Module::getModuleURL('duouniversal/duocallback.php')
             );
         } catch (DuoException $ex) {
-            throw new SimpleSAMLException('Duo configuration error: ' . $ex->getMessage());
+            $m = 'Error instantiating Duo client';
+            Logger::error($m . '; ' . $ex->getMessage());
+            throw new SimpleSAMLException($m);
         }
 
         // Fetch username for Duo from attributes based on configured username attribute.
@@ -126,11 +134,19 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
             $username = $state['Attributes'][$usernameAttribute][0];
         }
         else {
-            throw new BadRequest('Missing required username attribute.');
+            $m = 'Username attribute missing from current state';
+            Logger::error($m);
+            throw new BadRequest($m);
         }
 
         // Check if Duo API connection is functional, this will throw a DuoException to indicate failure.
-        $duoClient->healthCheck();
+        try {
+            $duoClient->healthCheck();
+        } catch (DuoException $ex) {
+            $m = 'Duo health check failed.';
+            Logger::error($m);
+            throw new SimpleSAMLException($m);
+        }
 
 
         // Generate Duo state nonce and store in current SimpleSAML auth state.
@@ -149,6 +165,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
 
         // Build a Duo URL for this authentication and redirect.
         $promptUrl = $duoClient->createAuthUrl($username, $duoNonce);
+        Logger::debug('Redirecting to Duo...');
         HTTP::redirectTrustedURL($promptUrl);
     }
 }
