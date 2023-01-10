@@ -1,12 +1,18 @@
 <?php
 
+declare(strict_types=1);
+
+namespace SimpleSAML\Module\DuoUniversal;
+
 use Simplesaml\Configuration;
 use SimpleSAML\Error\ConfigurationError;
 use SimpleSAML\Logger;
 
-class sspmod_duouniversal_Utils
-{
+use function implode;
+use function is_null;
 
+class Utils
+{
     /**
      * Determines the correct Duo application configuration to use for a given EntityID. Returns the configuration
      * to use as an array or null if the authentication should bypass Duo.
@@ -16,10 +22,13 @@ class sspmod_duouniversal_Utils
      * @return array|null
      * @throws \SimpleSAML\Error\ConfigurationError
      */
-    public static function resolveDuoAppConfig(Configuration $duoConfig, string $entityID): ?array {
+    public static function resolveDuoAppConfig(
+        Configuration $duoConfig,
+        string $entityID
+    ): ?array {
         $defaultDuoApp = $duoConfig->getValue('defaultDuoApp');
         $spDuoOverrides =  $duoConfig->getValue('spDuoOverrides');
-        $alternateDuoApps = $duoConfig->getValue('alternateDuoApps', []);
+        $alternateDuoApps = $duoConfig->getOptionalValue('alternateDuoApps', []);
 
         // A default app is required
         if (is_null($defaultDuoApp)) {
@@ -33,7 +42,7 @@ class sspmod_duouniversal_Utils
         if ($noOverridesSet || $noOverrideForEntityID) {
             $resolvedConfig = $defaultDuoApp;
             $resolvedConfig['name'] = 'default';
-            return sspmod_duouniversal_Utils::validateDuoAppConfig($resolvedConfig, 'defaultDuoApp');
+            return self::validateDuoAppConfig($resolvedConfig, 'defaultDuoApp');
         }
 
         $overrideAppName = $spDuoOverrides[$entityID] ?? null;
@@ -45,13 +54,13 @@ class sspmod_duouniversal_Utils
             // There is an override app, return its configuration.
             $resolvedConfig = $alternateDuoApps[$overrideAppName];
             $resolvedConfig['name'] = $overrideAppName;
-            return  sspmod_duouniversal_Utils::validateDuoAppConfig($resolvedConfig,
-                                                                    $overrideAppName);
+            return validateDuoAppConfig($resolvedConfig, $overrideAppName);
         } else {
             Logger::error('Undefined alternateDuoApp ' . $overrideAppName . ' for EntityID ' . $entityID);
             throw new ConfigurationError("Server configuration invalid.");
         }
     }
+
 
     /**
      * Validates the required elements are in a given Duo app config array. Returns the config if valid
@@ -64,7 +73,7 @@ class sspmod_duouniversal_Utils
      */
     private static function validateDuoAppConfig(array $duoAppConfig, string $configName = ''): array
     {
-        $missing = array();
+        $missing = [];
         if (!isset($duoAppConfig['clientID']) || $duoAppConfig['clientID'] == '') {
             $missing[] = 'clientID';
         }
@@ -72,9 +81,11 @@ class sspmod_duouniversal_Utils
         if (!isset($duoAppConfig['clientSecret']) || $duoAppConfig['clientSecret'] == '') {
            $missing[] = 'clientSecret';
         }
+
         if (!isset($duoAppConfig['apiHost']) || $duoAppConfig['apiHost'] == '') {
             $missing[] = 'apiHost';
         }
+
         if (!isset($duoAppConfig['usernameAttribute']) || $duoAppConfig['usernameAttribute'] == '') {
             $missing[] = 'usernameAttribute';
         }

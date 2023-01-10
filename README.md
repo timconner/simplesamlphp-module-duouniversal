@@ -6,15 +6,37 @@ Two-factor authentication module using Duo Security Universal Prompt for SimpleS
 
 ## Installation
 
-1. `cd` into the root of your SimpleSAMLphp installation
-2. run `composer require "0x0fbc\simplesamlphp-module-duouniversal"`
-3. Copy `module_duouniversal.php.dist` from the `config` directory of this repo to the config directory of your SimpleSAMLphp deployment.
-4. Create (if you haven't already) a Duo Universal WebSDKv4 application in the "applications" section of your Duo deployment's admin console and set the following values in the `defaultDuoApp` section of the config:
+Once you have installed SimpleSAMLphp, installing this module is very simple.
+Just execute the following command in the root of your SimpleSAMLphp
+installation:
+
+```bash
+composer require simplesamlphp/simplesamlphp-module-duouniversal:dev-master
+```
+
+where `dev-master` instructs Composer to install the `master` branch from the
+Git repository. See the [releases][releases]
+available if you want to use a stable version of the module.
+
+Next thing you need to do is to enable the module: in `config.php`,
+search for the `module.enable` key and set `duouniversal` to true:
+
+```php
+    'module.enable' => [
+         'duouniversal' => true,
+         …
+    ],
+```
+
+## Configuration
+
+1. Copy `module_duouniversal.php.dist` from the `config` directory of this repo to the config directory of your SimpleSAMLphp deployment.
+2. Create (if you haven't already) a Duo Universal WebSDKv4 application in the "applications" section of your Duo deployment's admin console and set the following values in the `defaultDuoApp` section of the config:
    1. `clientID` to the "Client ID"
    2. `clientSecret` to the "Client Secret"
    3. `apiHost` to the "API hostname"
    4. `usernameAttribute` to the SAML attribute which correlates to usernames in your Duo deployment.
-5. Add an entry into your authentication processing filter chain with the following contents:
+3. Add an entry into your authentication processing filter chain with the following contents:
 
 ```php
 [

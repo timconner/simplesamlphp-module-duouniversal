@@ -1,19 +1,25 @@
 <?php
 
-use sspmod_duouniversal_Utils as DuUtils;
+namespace SimpleSAML\Module\DuoUniversal\Auth\Process;
 
 use Duo\DuoUniversal\DuoException;
 use SimpleSAML\Auth;
-use SimpleSAML\Auth\State;
+use SimpleSAML\Configuration;
 use SimpleSAML\Error\BadRequest;
 use SimpleSAML\Error\Exception as SimpleSAMLException;
 use SimpleSAML\Logger;
 use SimpleSAML\Metadata\MetaDataStorageHandler;
 use SimpleSAML\Module;
+use SimpleSAML\Module\DuoUniversal\Utils as DuUtils;
 use SimpleSAML\Module\saml\Error\NoPassive;
 use SimpleSAML\Session;
 use SimpleSAML\Store;
 use SimpleSAML\Utils\HTTP;
+
+use function boolval;
+use function in_array;
+use function is_array;
+use function is_null;
 
 /**
  * Duo Universal Authentication Processing filter
@@ -22,10 +28,9 @@ use SimpleSAML\Utils\HTTP;
  *
  * @package simpleSAMLphp
  */
-class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\ProcessingFilter
+class DuoUniversal extends Auth\ProcessingFilter
 {
-
-    private $moduleConfig;
+    private Configuration $moduleConfig;
 
     /**
      * Initialize Duo Universal
@@ -36,13 +41,14 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
      * @param mixed $reserved
      * @throws \SimpleSAML\Error\Exception
      */
-    public function __construct($config, $reserved)
+    public function __construct(array $config, $reserved)
     {
         parent::__construct($config, $reserved);
 
         // Fetch the store prefix and api information from the module config.
-        $this->moduleConfig = SimpleSaml\Configuration::getConfig('module_duouniversal.php');
+        $this->moduleConfig = Configuration::getConfig('module_duouniversal.php');
     }
+
 
     /**
      * Helper function to check whether Duo is disabled.
@@ -50,13 +56,15 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
      * @param mixed $option  The consent.disable option. Either an array or a boolean.
      * @return boolean  TRUE if disabled, FALSE if not.
      */
-    private static function checkDisable($option, $entityId) {
+    private static function checkDisable($option, string $entityId): bool
+    {
         if (is_array($option)) {
-            return in_array($entityId, $option, TRUE);
+            return in_array($entityId, $option, true);
         } else {
-            return (boolean)$option;
+            return boolval($option);
         }
     }
+
 
     /**
      * Process an authentication response
@@ -73,7 +81,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
      * @throws \SimpleSAML\Error\CriticalConfigurationError
      * @throws \SimpleSAML\Error\MetadataNotFound
      */
-    public function process(&$state)
+    public function process(array &$state): void
     {
         $spEntityId = $state['Destination']['entityid'];
 
@@ -87,7 +95,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
          */
         if (isset($state['saml:sp:IdP'])) {
             $idpEntityId = $state['saml:sp:IdP'];
-            $idpmeta         = $metadata->getMetaData($idpEntityId, 'saml20-idp-remote');
+            $idpmeta = $metadata->getMetaData($idpEntityId, 'saml20-idp-remote');
             $state['Source'] = $idpmeta;
         }
 
@@ -132,8 +140,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
         // Fetch username for Duo from attributes based on configured username attribute.
         if (isset($state['Attributes'][$usernameAttribute][0])) {
             $username = $state['Attributes'][$usernameAttribute][0];
-        }
-        else {
+        } else {
             $m = 'Username attribute missing from current state';
             Logger::error($m);
             throw new BadRequest($m);
