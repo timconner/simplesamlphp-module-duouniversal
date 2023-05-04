@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace SimpleSAML\Module\DuoUniversal;
 
-use Simplesaml\Configuration;
+use SimpleSAML\Configuration;
 use SimpleSAML\Error\ConfigurationError;
 use SimpleSAML\Logger;
 

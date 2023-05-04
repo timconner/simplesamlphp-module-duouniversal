@@ -1,0 +1,19 @@
+{
+  "symbol-whitelist": [
+    "SimpleSAML\\Auth\\ProcessingChain",
+    "SimpleSAML\\Auth\\ProcessingFilter",
+    "SimpleSAML\\Auth\\State",
+    "SimpleSAML\\Configuration",
+    "SimpleSAML\\Error\\BadRequest",
+    "SimpleSAML\\Error\\ConfigurationError",
+    "SimpleSAML\\Error\\Exception",
+    "SimpleSAML\\Logger",
+    "SimpleSAML\\Metadata\\MetaDataStorageHandler",
+    "SimpleSAML\\Module",
+    "SimpleSAML\\Module\\saml\\Error\\NoPassive",
+    "SimpleSAML\\Session",
+    "SimpleSAML\\Store",
+    "SimpleSAML\\Store\\StoreFactory",
+    "SimpleSAML\\Utils\\HTTP"
+  ]
+}
