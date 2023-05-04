@@ -64,7 +64,7 @@ class DuoController
         // Duo authentication redirect.
         try {
             $store = StoreFactory::getInstance();
-            $stateID = $store->get('string', $duoStorePrefix . ':'. $duoNonce);
+            $stateID = $store->get('string', $duoStorePrefix . ':' . $duoNonce);
         } catch (Exception $ex) {
             $m = 'Failed to load SimpleSAML state with nonce.';
             Logger::error('Nonce: ' . $duoNonce . '; ' . $m);
@@ -72,10 +72,10 @@ class DuoController
         }
 
         // If the duo nonce isn't associated with an SSP state ID, the auth is invalid.
-        if (!isset($stateID) ){
+        if (!isset($stateID)) {
             $m = 'No state with Duo nonce.';
-            Logger::error('Nonce: ' . $duoNonce. '; '. $m);
-             throw new Error\Exception($m);
+            Logger::error('Nonce: ' . $duoNonce . '; ' . $m);
+            throw new Error\Exception($m);
         }
 
         // Fetch the state using the retrieved SSP state ID.
@@ -83,7 +83,7 @@ class DuoController
         if (!isset($state)) {
             // If loadState doesn't find a state, it returns null, so we have to check and throw our own exception.
             $m = 'No state with Duo nonce.';
-            Logger::error('Nonce: ' . $duoNonce. ';' . $m);
+            Logger::error('Nonce: ' . $duoNonce . ';' . $m);
             throw new Error\Exception($m);
         }
 
@@ -97,7 +97,11 @@ class DuoController
         // Double-check that the Duo nonce saved in the retrieved state matches the one we've retrieved from the
         // associated simplesamlphp auth state.
         if ($state['duouniversal:duoNonce'] != $duoNonce) {
-            $m = 'Nonce: ' . $duoNonce . " State: " . $stateID . '; Nonce from retrieved state does not match callback nonce';
+            $m = sprintf(
+                'Nonce: %s; State: %s; Nonce from retrieved state does not match callback nonce',
+                $duoNonce,
+                $stateID
+            );
             Logger::error($m);
             throw new Error\Exception($m);
         }
@@ -140,7 +144,7 @@ class DuoController
                 $duoCode,
                 $state['Attributes'][$usernameAttribute][0]
             );
-        } catch (DuoException $ex ) {
+        } catch (DuoException $ex) {
             $m = "Error decoding duo result.";
             Logger::error($m . ' ' . $ex->getMessage());
             throw new Error\BadRequest($m);

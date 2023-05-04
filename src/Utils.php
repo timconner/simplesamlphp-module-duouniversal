@@ -50,7 +50,7 @@ class Utils
         // If the override app name is 'bypass', return null to indicate this EntityID should bypass Duo.
         if ($overrideAppName == 'bypass') {
             return null;
-        } else if (isset($alternateDuoApps[$overrideAppName])) {
+        } elseif (isset($alternateDuoApps[$overrideAppName])) {
             // There is an override app, return its configuration.
             $resolvedConfig = $alternateDuoApps[$overrideAppName];
             $resolvedConfig['name'] = $overrideAppName;
@@ -79,7 +79,7 @@ class Utils
         }
 
         if (!isset($duoAppConfig['clientSecret']) || $duoAppConfig['clientSecret'] == '') {
-           $missing[] = 'clientSecret';
+            $missing[] = 'clientSecret';
         }
 
         if (!isset($duoAppConfig['apiHost']) || $duoAppConfig['apiHost'] == '') {
