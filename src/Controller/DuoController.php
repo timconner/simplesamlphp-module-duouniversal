@@ -27,9 +27,8 @@ class DuoController
 {
     /**
      * @param \Symfony\Component\HttpFoundation\Request $request The current request.
-     *
      */
-    public function main(Request $request)
+    public function main(Request $request): void
     {
         // Signal to clients/proxies to not cache this page.
         session_cache_limiter('nocache');
@@ -58,12 +57,13 @@ class DuoController
 
         // Load module configuration and get storePrefix to start
         $moduleConfig = Configuration::getConfig("module_duouniversal.php");
-        $duoStorePrefix = $moduleConfig->getValue('storePrefix', 'duouniversal');
+        $duoStorePrefix = $moduleConfig->getOptionalString('storePrefix', 'duouniversal');
 
         // Bootstrap authentication state by retrieving an SSP state ID using the Duo nonce provided by the
         // Duo authentication redirect.
         try {
-            $store = StoreFactory::getInstance();
+            $config = Configuration::getInstance();
+            $store = StoreFactory::getInstance($config->getString('store.type'));
             $stateID = $store->get('string', $duoStorePrefix . ':' . $duoNonce);
         } catch (Exception $ex) {
             $m = 'Failed to load SimpleSAML state with nonce.';
@@ -134,7 +134,7 @@ class DuoController
             );
         } catch (DuoException $ex) {
             $m = 'Error instantiating Duo client';
-             Logger::error($m . " " . $ex->getMessage());
+            Logger::error($m . " " . $ex->getMessage());
             throw new Error\Exception($m);
         }
 

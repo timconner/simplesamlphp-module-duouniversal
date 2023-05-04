@@ -14,8 +14,8 @@ use SimpleSAML\Module;
 use SimpleSAML\Module\duouniversal\Utils as DuoUtils;
 use SimpleSAML\Module\saml\Error\NoPassive;
 use SimpleSAML\Session;
-use SimpleSAML\Store;
-use SimpleSAML\Utils\HTTP;
+use SimpleSAML\Store\StoreFactory;
+use SimpleSAML\Utils;
 
 use function boolval;
 use function in_array;
@@ -77,8 +77,8 @@ class DuoUniversal extends Auth\ProcessingFilter
      *
      * @return void
      * @throws \SimpleSAML\Error\BadRequest
-     * @throws Duo\DuoUniversal\DuoException
-     * @throws SimpleSAML\Module\saml\Error\NoPassive
+     * @throws \Duo\DuoUniversal\DuoException
+     * @throws \SimpleSAML\Module\saml\Error\NoPassive
      * @throws \SimpleSAML\Error\CriticalConfigurationError
      * @throws \SimpleSAML\Error\MetadataNotFound
      */
@@ -165,7 +165,8 @@ class DuoUniversal extends Auth\ProcessingFilter
         $stateId = Auth\State::saveState($state, 'duouniversal:duoRedirect');
 
         // Get an instance of the SimpleSAML store
-        $store = Store::getInstance();
+        $config = Configuration::getInstance();
+        $store = StoreFactory::getInstance($config->getString('store.type'));
 
         // Save the SimpleSAML state ID in the store under the Duo nonce generated earlier.
         $stateIDKey = $storePrefix . ':' . $duoNonce;
@@ -174,6 +175,7 @@ class DuoUniversal extends Auth\ProcessingFilter
         // Build a Duo URL for this authentication and redirect.
         $promptUrl = $duoClient->createAuthUrl($username, $duoNonce);
         Logger::debug('Redirecting to Duo...');
-        HTTP::redirectTrustedURL($promptUrl);
+        $httpUtils = new Utils\HTTP();
+        $httpUtils->redirectTrustedURL($promptUrl);
     }
 }

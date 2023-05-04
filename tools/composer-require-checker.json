@@ -12,7 +12,6 @@
     "SimpleSAML\\Module",
     "SimpleSAML\\Module\\saml\\Error\\NoPassive",
     "SimpleSAML\\Session",
-    "SimpleSAML\\Store",
     "SimpleSAML\\Store\\StoreFactory",
     "SimpleSAML\\Utils\\HTTP"
   ]
