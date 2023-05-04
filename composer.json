@@ -18,6 +18,11 @@
     "require-dev": {
         "simplesamlphp/simplesamlphp-test-framework": "^1.2.1"
     },
+    "autoload": {
+        "psr-4": {
+            "SimpleSAML\\Module\\duouniversal\\": "src/"
+        }
+    },
     "config": {
         "allow-plugins": {
             "simplesamlphp/composer-module-installer": true
