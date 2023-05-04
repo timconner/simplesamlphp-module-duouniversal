@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace SimpleSAML\Module\DuoUniversal\Controller;
+namespace SimpleSAML\Module\duouniversal\Controller;
 
+use Duo\DuoUniversal\Client as DuoClient;
 use Duo\DuoUniversal\DuoException;
 use Exception;
 use SimpleSAML\Auth;
@@ -11,7 +12,7 @@ use SimpleSAML\Configuration;
 use SimpleSAML\Error;
 use SimpleSAML\Logger;
 use SimpleSAML\Module;
-use SimpleSAML\Module\DuoUniversal\Utils as DuUtils;
+use SimpleSAML\Module\duouniversal\Utils as DuoUtils;
 use SimpleSAML\Store\StoreFactory;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -102,7 +103,7 @@ class DuoController
         }
 
         // Now that we have a valid state we can get the SP Entity ID to resolve an override app config, if any.
-        $duoAppConfig = DuUtils::resolveDuoAppConfig($moduleConfig, $state['Destination']['entityid']);
+        $duoAppConfig = DuoUtils::resolveDuoAppConfig($moduleConfig, $state['Destination']['entityid']);
 
         if (is_null($duoAppConfig)) {
             // This should never happen in this script, fail closed.
@@ -121,7 +122,7 @@ class DuoController
 
         // Set up a new Duo Client for validating the returned Duo code.
         try {
-            $duoClient = new Duo\DuoUniversal\Client(
+            $duoClient = new DuoClient(
                 $clientID,
                 $clientSecret,
                 $apiHost,

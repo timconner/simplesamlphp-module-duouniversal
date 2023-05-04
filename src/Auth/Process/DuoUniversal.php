@@ -1,7 +1,8 @@
 <?php
 
-namespace SimpleSAML\Module\DuoUniversal\Auth\Process;
+namespace SimpleSAML\Module\duouniversal\Auth\Process;
 
+use Duo\DuoUniversal\Client as DuoClient;
 use Duo\DuoUniversal\DuoException;
 use SimpleSAML\Auth;
 use SimpleSAML\Configuration;
@@ -10,7 +11,7 @@ use SimpleSAML\Error\Exception as SimpleSAMLException;
 use SimpleSAML\Logger;
 use SimpleSAML\Metadata\MetaDataStorageHandler;
 use SimpleSAML\Module;
-use SimpleSAML\Module\DuoUniversal\Utils as DuUtils;
+use SimpleSAML\Module\duouniversal\Utils as DuoUtils;
 use SimpleSAML\Module\saml\Error\NoPassive;
 use SimpleSAML\Session;
 use SimpleSAML\Store;
@@ -107,7 +108,7 @@ class DuoUniversal extends Auth\ProcessingFilter
         }
 
         // Determine the correct Duo application to use and set configuration.
-        $duoAppConfig = DuUtils::resolveDuoAppConfig($this->moduleConfig, $spEntityId);
+        $duoAppConfig = DuoUtils::resolveDuoAppConfig($this->moduleConfig, $spEntityId);
         // Bypass Duo auth if the app config returned is null.
         if (is_null($duoAppConfig)) {
             Logger::notice("Bypassing Duo prompt for $spEntityId");
@@ -125,7 +126,7 @@ class DuoUniversal extends Auth\ProcessingFilter
         $storePrefix = $this->moduleConfig->getValue('storePrefix') ?? "duouniversal";
 
         try {
-            $duoClient = new Duo\DuoUniversal\Client(
+            $duoClient = new DuoClient(
                 $clientID,
                 $clientSecret,
                 $apiHost,
@@ -161,7 +162,7 @@ class DuoUniversal extends Auth\ProcessingFilter
         $state['duouniversal:duoNonce'] = $duoNonce;
 
         // Save the current ssp state and get a state ID.
-        $stateId = State::saveState($state, 'duouniversal:duoRedirect');
+        $stateId = Auth\State::saveState($state, 'duouniversal:duoRedirect');
 
         // Get an instance of the SimpleSAML store
         $store = Store::getInstance();

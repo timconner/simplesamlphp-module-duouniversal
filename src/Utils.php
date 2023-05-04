@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace SimpleSAML\Module\DuoUniversal;
+namespace SimpleSAML\Module\duouniversal;
 
 use SimpleSAML\Configuration;
 use SimpleSAML\Error\ConfigurationError;
@@ -54,7 +54,7 @@ class Utils
             // There is an override app, return its configuration.
             $resolvedConfig = $alternateDuoApps[$overrideAppName];
             $resolvedConfig['name'] = $overrideAppName;
-            return validateDuoAppConfig($resolvedConfig, $overrideAppName);
+            return self::validateDuoAppConfig($resolvedConfig, $overrideAppName);
         } else {
             Logger::error('Undefined alternateDuoApp ' . $overrideAppName . ' for EntityID ' . $entityID);
             throw new ConfigurationError("Server configuration invalid.");
