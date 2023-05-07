@@ -2,5 +2,5 @@
 duo-universal-main:
   path: /main
   defaults: {
-    _controller: 'SimpleSAML\Module\DuoUniversial\Controller\DuoController::main'
+    _controller: 'SimpleSAML\Module\duouniversial\Controller\DuoController::main'
   }
