@@ -130,7 +130,7 @@ class DuoController
                 $clientID,
                 $clientSecret,
                 $apiHost,
-                Module::getModuleURL('duouniversal/duocallback')
+                Module::getModuleURL('duouniversal/main')
             );
         } catch (DuoException $ex) {
             $m = 'Error instantiating Duo client';

@@ -130,7 +130,7 @@ class DuoUniversal extends Auth\ProcessingFilter
                 $clientID,
                 $clientSecret,
                 $apiHost,
-                Module::getModuleURL('duouniversal/duocallback.php')
+                Module::getModuleURL('duouniversal/main')
             );
         } catch (DuoException $ex) {
             $m = 'Error instantiating Duo client';
