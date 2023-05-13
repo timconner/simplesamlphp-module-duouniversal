@@ -1,19 +1,26 @@
 <?php
 
-use sspmod_duouniversal_Utils as DuUtils;
+namespace SimpleSAML\Module\duouniversal\Auth\Process;
 
+use Duo\DuoUniversal\Client as DuoClient;
 use Duo\DuoUniversal\DuoException;
 use SimpleSAML\Auth;
-use SimpleSAML\Auth\State;
+use SimpleSAML\Configuration;
 use SimpleSAML\Error\BadRequest;
 use SimpleSAML\Error\Exception as SimpleSAMLException;
 use SimpleSAML\Logger;
 use SimpleSAML\Metadata\MetaDataStorageHandler;
 use SimpleSAML\Module;
+use SimpleSAML\Module\duouniversal\Utils as DuoUtils;
 use SimpleSAML\Module\saml\Error\NoPassive;
 use SimpleSAML\Session;
-use SimpleSAML\Store;
-use SimpleSAML\Utils\HTTP;
+use SimpleSAML\Store\StoreFactory;
+use SimpleSAML\Utils;
+
+use function boolval;
+use function in_array;
+use function is_array;
+use function is_null;
 
 /**
  * Duo Universal Authentication Processing filter
@@ -22,10 +29,9 @@ use SimpleSAML\Utils\HTTP;
  *
  * @package simpleSAMLphp
  */
-class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\ProcessingFilter
+class DuoUniversal extends Auth\ProcessingFilter
 {
-
-    private $moduleConfig;
+    private Configuration $moduleConfig;
 
     /**
      * Initialize Duo Universal
@@ -36,13 +42,14 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
      * @param mixed $reserved
      * @throws \SimpleSAML\Error\Exception
      */
-    public function __construct($config, $reserved)
+    public function __construct(array $config, $reserved)
     {
         parent::__construct($config, $reserved);
 
         // Fetch the store prefix and api information from the module config.
-        $this->moduleConfig = SimpleSaml\Configuration::getConfig('module_duouniversal.php');
+        $this->moduleConfig = Configuration::getConfig('module_duouniversal.php');
     }
+
 
     /**
      * Helper function to check whether Duo is disabled.
@@ -50,13 +57,15 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
      * @param mixed $option  The consent.disable option. Either an array or a boolean.
      * @return boolean  TRUE if disabled, FALSE if not.
      */
-    private static function checkDisable($option, $entityId) {
+    private static function checkDisable($option, string $entityId): bool
+    {
         if (is_array($option)) {
-            return in_array($entityId, $option, TRUE);
+            return in_array($entityId, $option, true);
         } else {
-            return (boolean)$option;
+            return boolval($option);
         }
     }
+
 
     /**
      * Process an authentication response
@@ -68,12 +77,12 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
      *
      * @return void
      * @throws \SimpleSAML\Error\BadRequest
-     * @throws Duo\DuoUniversal\DuoException
-     * @throws SimpleSAML\Module\saml\Error\NoPassive
+     * @throws \Duo\DuoUniversal\DuoException
+     * @throws \SimpleSAML\Module\saml\Error\NoPassive
      * @throws \SimpleSAML\Error\CriticalConfigurationError
      * @throws \SimpleSAML\Error\MetadataNotFound
      */
-    public function process(&$state)
+    public function process(array &$state): void
     {
         $spEntityId = $state['Destination']['entityid'];
 
@@ -87,7 +96,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
          */
         if (isset($state['saml:sp:IdP'])) {
             $idpEntityId = $state['saml:sp:IdP'];
-            $idpmeta         = $metadata->getMetaData($idpEntityId, 'saml20-idp-remote');
+            $idpmeta = $metadata->getMetaData($idpEntityId, 'saml20-idp-remote');
             $state['Source'] = $idpmeta;
         }
 
@@ -99,7 +108,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
         }
 
         // Determine the correct Duo application to use and set configuration.
-        $duoAppConfig = DuUtils::resolveDuoAppConfig($this->moduleConfig, $spEntityId);
+        $duoAppConfig = DuoUtils::resolveDuoAppConfig($this->moduleConfig, $spEntityId);
         // Bypass Duo auth if the app config returned is null.
         if (is_null($duoAppConfig)) {
             Logger::notice("Bypassing Duo prompt for $spEntityId");
@@ -117,11 +126,11 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
         $storePrefix = $this->moduleConfig->getValue('storePrefix') ?? "duouniversal";
 
         try {
-            $duoClient = new Duo\DuoUniversal\Client(
+            $duoClient = new DuoClient(
                 $clientID,
                 $clientSecret,
                 $apiHost,
-                Module::getModuleURL('duouniversal/duocallback.php')
+                Module::getModuleURL('duouniversal/main')
             );
         } catch (DuoException $ex) {
             $m = 'Error instantiating Duo client';
@@ -132,8 +141,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
         // Fetch username for Duo from attributes based on configured username attribute.
         if (isset($state['Attributes'][$usernameAttribute][0])) {
             $username = $state['Attributes'][$usernameAttribute][0];
-        }
-        else {
+        } else {
             $m = 'Username attribute missing from current state';
             Logger::error($m);
             throw new BadRequest($m);
@@ -154,10 +162,11 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
         $state['duouniversal:duoNonce'] = $duoNonce;
 
         // Save the current ssp state and get a state ID.
-        $stateId = State::saveState($state, 'duouniversal:duoRedirect');
+        $stateId = Auth\State::saveState($state, 'duouniversal:duoRedirect');
 
         // Get an instance of the SimpleSAML store
-        $store = Store::getInstance();
+        $config = Configuration::getInstance();
+        $store = StoreFactory::getInstance($config->getString('store.type'));
 
         // Save the SimpleSAML state ID in the store under the Duo nonce generated earlier.
         $stateIDKey = $storePrefix . ':' . $duoNonce;
@@ -166,6 +175,7 @@ class sspmod_duouniversal_Auth_Process_DuoUniversal extends SimpleSAML\Auth\Proc
         // Build a Duo URL for this authentication and redirect.
         $promptUrl = $duoClient->createAuthUrl($username, $duoNonce);
         Logger::debug('Redirecting to Duo...');
-        HTTP::redirectTrustedURL($promptUrl);
+        $httpUtils = new Utils\HTTP();
+        $httpUtils->redirectTrustedURL($promptUrl);
     }
 }
