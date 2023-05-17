@@ -10,6 +10,7 @@ use Exception;
 use SimpleSAML\Auth;
 use SimpleSAML\Configuration;
 use SimpleSAML\Error;
+use SimpleSAML\Error\ConfigurationError;
 use SimpleSAML\Logger;
 use SimpleSAML\Module;
 use SimpleSAML\Module\duouniversal\Utils as DuoUtils;
@@ -61,9 +62,18 @@ class DuoController
 
         // Bootstrap authentication state by retrieving an SSP state ID using the Duo nonce provided by the
         // Duo authentication redirect.
+        $config = Configuration::getInstance();
+        $storeType = $config->getString('store.type');
+        $store = StoreFactory::getInstance($storeType);
+
+        if ($store === false) {
+            // We must have a store to proceed
+            $m = "Invalid 'store.type' configuration option '$storeType'.";
+            Logger::error($m);
+            throw new ConfigurationError($m);
+        }
+
         try {
-            $config = Configuration::getInstance();
-            $store = StoreFactory::getInstance($config->getString('store.type'));
             $stateID = $store->get('string', $duoStorePrefix . ':' . $duoNonce);
         } catch (Exception $ex) {
             $m = 'Failed to load SimpleSAML state with nonce.';

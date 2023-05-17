@@ -28,6 +28,8 @@ search for the `module.enable` key and set `duouniversal` to true:
     ],
 ```
 
+A datastore other than SimpleSAMLphp's default `phpsession` must be configured to use this module. Information on datastore configuration can be found in the [SimpleSAMLphp documentation](https://simplesamlphp.org/docs/stable/simplesamlphp-maintenance.html#session-management).
+
 ## Configuration
 
 1. Copy `module_duouniversal.php.dist` from the `config` directory of this repo to the config directory of your SimpleSAMLphp deployment.

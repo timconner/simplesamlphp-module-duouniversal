@@ -7,6 +7,7 @@ use Duo\DuoUniversal\DuoException;
 use SimpleSAML\Auth;
 use SimpleSAML\Configuration;
 use SimpleSAML\Error\BadRequest;
+use SimpleSAML\Error\ConfigurationError;
 use SimpleSAML\Error\Exception as SimpleSAMLException;
 use SimpleSAML\Logger;
 use SimpleSAML\Metadata\MetaDataStorageHandler;
@@ -166,7 +167,15 @@ class DuoUniversal extends Auth\ProcessingFilter
 
         // Get an instance of the SimpleSAML store
         $config = Configuration::getInstance();
-        $store = StoreFactory::getInstance($config->getString('store.type'));
+        $storeType = $config->getString('store.type');
+        $store = StoreFactory::getInstance($storeType);
+
+        if ($store === false) {
+            // We must have a store to proceed
+            $m = "Invalid 'store.type' configuration option '$storeType'.";
+            Logger::error($m);
+            throw new ConfigurationError($m);
+        }
 
         // Save the SimpleSAML state ID in the store under the Duo nonce generated earlier.
         $stateIDKey = $storePrefix . ':' . $duoNonce;
