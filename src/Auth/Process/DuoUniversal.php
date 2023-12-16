@@ -33,6 +33,7 @@ use function is_null;
 class DuoUniversal extends Auth\ProcessingFilter
 {
     private Configuration $moduleConfig;
+    private bool $skipSubsequent;
 
     /**
      * Initialize Duo Universal
@@ -49,6 +50,13 @@ class DuoUniversal extends Auth\ProcessingFilter
 
         // Fetch the store prefix and api information from the module config.
         $this->moduleConfig = Configuration::getConfig('module_duouniversal.php');
+        
+        // Check if Duo authentication should be skipped on subsequent requests
+        if (isset($config['skipSubsequent']) && $config['skipSubsequent'] === true) {
+            $this->skipSubsequent = true;
+        } else {
+            $this->skipSubsequent = false;
+        }
     }
 
 
@@ -99,6 +107,20 @@ class DuoUniversal extends Auth\ProcessingFilter
             $idpEntityId = $state['saml:sp:IdP'];
             $idpmeta = $metadata->getMetaData($idpEntityId, 'saml20-idp-remote');
             $state['Source'] = $idpmeta;
+        }
+
+        // Check if Duo should be skipped on subsequent authorizations
+        if ($this->skipSubsequent) {
+            // Check if already authorized by idp
+            if (isset($state['AuthnInstant'])) {
+                // Check if already completed Duo
+                $session = Session::getSessionFromRequest();
+                $isAuthorized = $session->getData('duouniversal:request', 'is_authorized');
+                if ($isAuthorized) {
+                    // Bypass Duo
+                    return;
+                }
+            }
         }
 
         // User interaction with Duo is required, so we throw NoPassive on isPassive request.

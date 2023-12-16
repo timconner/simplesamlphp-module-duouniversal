@@ -14,6 +14,7 @@ use SimpleSAML\Error\ConfigurationError;
 use SimpleSAML\Logger;
 use SimpleSAML\Module;
 use SimpleSAML\Module\duouniversal\Utils as DuoUtils;
+use SimpleSAML\Session;
 use SimpleSAML\Store\StoreFactory;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -160,6 +161,11 @@ class DuoController
             throw new Error\BadRequest($m);
         }
         Logger::debug('Duo verification successful, continuing authentication.');
+
+        // Get idP session from auth request
+        $session = Session::getSessionFromRequest();
+        // Set session variable that DUO authorization has passed
+        $session->setData('duouniversal:request', 'is_authorized', true, Session::DATA_TIMEOUT_SESSION_END);
 
         // If nothing has gone wrong, resume processing.
         Auth\ProcessingChain::resumeProcessing($state);
